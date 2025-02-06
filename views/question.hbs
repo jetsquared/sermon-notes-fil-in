@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Fill in the Blank Quiz</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body class="bg-gray-50">
+    <div class="min-h-screen p-4 md:p-6">
+      <div class="max-w-3xl mx-auto">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+          <!-- Toolbar -->
+          <div class="p-4 bg-gray-50 border-b border-gray-200 rounded-t-xl">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <button onclick="clearAllAnswers()" 
+                      class="flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                🗑️ Clear All Answers
+              </button>
+              <button onclick="copyContent()"
+                      class="flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                📋 Copy Content
+              </button>
+              <button onclick="confirmFillAnswers()"
+                      class="flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                💡 Fill All Answers
+              </button>
+            </div>
+          </div>
+
+          <!-- Content -->
+          <div class="p-6" id="questions-container"></div>
+        </div>
+      </div>
+    </div>
+
+    <style>
+      /* Minimal custom styles for specific components */
+      .blank-input {
+        @apply px-2 py-1 mx-1 bg-transparent;
+        border-bottom: 2px solid #d1d5db;  /* Explicit border styling */
+        outline: none;
+      }
+      
+      .blank-input:focus {
+        border-bottom: 2px solid #3b82f6;  /* Blue border on focus */
+      }
+      
+      .blank-input.correct {
+        border-bottom: 2px solid #22c55e;  /* Green border for correct */
+      }
+      
+      .blank-input.incorrect {
+        border-bottom: 2px solid #ef4444;  /* Red border for incorrect */
+      }
+
+      .check-button {
+        @apply mx-1 text-lg hover:text-blue-500 focus:outline-none;
+      }
+
+      .answer-button {
+        margin: 0 0.25rem;
+        font-size: 0.5rem;
+        padding: 0.25rem 0.5rem;
+        background-color: #eff6ff;
+        color: #2563eb;
+        border-radius: 9999px;
+        border: 1px solid #bfdbfe;
+        outline: none;
+        transition: all 0.2s;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-weight: 500;
+        display: inline-block;
+        margin-top: 0.5rem;
+      }
+
+      .answer-button:hover {
+        background-color: #dbeafe;
+      }
+
+      .answer-buttons-container {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 0.25rem;
+        margin-bottom: 0.5rem;
+      }
+
+      .hint {
+        @apply text-gray-500 text-sm italic;
+      }
+
+      .question-row {
+        display: block;
+        margin-bottom: 0.3rem;  /* Custom value between mb-1 (0.25rem) and mb-2 (0.5rem) */
+      }
+
+      .answer-buttons-container:empty {
+        display: none;
+      }
+    </style>
+
+    <script>
+      const questionData = {
+        questions: {{{json question.questions}}},
+        content: {{{json question.content}}}
+      };
+      
+      console.log('Question Data:', questionData);
+
+      function renderMarkdown(text) {
+        // Handle headers (# ## ###)
+        text = text.replace(/^(#{1,6})\s+(.+)$/gm, (match, hashes, content) => {
+          const level = hashes.length;
+          const classes = {
+            1: 'text-3xl font-bold mb-6 mt-8',
+            2: 'text-2xl font-bold mb-4 mt-6',
+            3: 'text-xl font-bold mb-3 mt-5',
+            4: 'text-lg font-bold mb-2 mt-4',
+            5: 'text-base font-bold mb-2 mt-3',
+            6: 'text-sm font-bold mb-2 mt-2'
+          };
+          return `<h${level} class="${classes[level]}">${content}</h${level}>`;
+        });
+
+        // Handle bold text (**text**)
+        text = text.replace(/\*\*(.+?)\*\*/g, '<strong class="font-bold">$1</strong>');
+
+        // Handle blockquotes
+        text = text.replace(/^>\s+(.+)$/gm, '<blockquote class="pl-4 border-l-4 border-gray-300 text-gray-600 italic my-4 text-xl leading-relaxed">$1</blockquote>');
+
+        // Handle bullet points with proper Tailwind classes
+        text = text.replace(/^-\s+(.+)$/gm, (match, content) => {
+          return `<div class="question-row"><li class="text-base leading-relaxed">${content}</li></div>`;
+        });
+        text = text.replace(/(<div class="question-row"><li.*?<\/li><\/div>\n?)+/g, 
+          '<ul class="list-disc pl-6 my-2 space-y-1">$&</ul>');
+
+        return text;
+      }
+
+      // Add debounce function
+      function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+          const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+          };
+          clearTimeout(timeout);
+          timeout = setTimeout(later, wait);
+        };
+      }
+
+      function initializeQuiz() {
+        const container = document.getElementById('questions-container');
+        let content = questionData.content;
+        
+        content = renderMarkdown(content);
+        
+        // Create a map to track number of blanks per line
+        const blankCountMap = new Map();
+        const buttonsByLine = new Map();
+        let currentLineStart = 0;
+        
+        questionData.questions.forEach((q, index) => {
+          const answerLength = q.answer.length;
+          const width = Math.max(80, (answerLength * 9) + 20);
+          
+          // Find position of this #blank
+          const blankPos = content.indexOf('#blank', currentLineStart);
+          
+          // Get the line containing this blank
+          const lineStart = content.lastIndexOf('\n', blankPos) + 1;
+          const lineEnd = content.indexOf('\n', blankPos);
+          const currentLine = content.slice(lineStart, lineEnd > -1 ? lineEnd : content.length);
+          
+          // Use the line start position as the line identifier
+          const lineId = lineStart;
+          
+          // Store button HTML by line ID - now using index + 1 for the button number
+          const buttonHtml = `<button class="answer-button"
+            id="show-answer-${q.blankIndex}" 
+            onclick="toggleAnswer(${q.blankIndex})"
+          >Reveal Answer ${index + 1}</button>`;
+          
+          if (!buttonsByLine.has(lineId)) {
+            buttonsByLine.set(lineId, []);
+          }
+          buttonsByLine.get(lineId).push(buttonHtml);
+          
+          const inputHtml = `<input type="text" 
+            class="blank-input" 
+            data-blank-index="${q.blankIndex}" 
+            data-line="${lineId}"
+            oninput="handleInput(${q.blankIndex})" 
+            style="width: ${width}px">`;
+          
+          content = content.replace('#blank', inputHtml);
+          currentLineStart = blankPos + 1;
+        });
+
+        // Add buttons container to question-row divs that have inputs
+        content = content.replace(/<div class="question-row">([^<]*(?:<(?!\/div)[^<]*)*)<\/div>/g, (match, line) => {
+          // Find all line IDs in this question-row
+          const lineIds = [...line.matchAll(/data-line="(\d+)"/g)].map(m => m[1]);
+          const uniqueLineIds = [...new Set(lineIds)];
+          
+          // Get all buttons for these line IDs
+          const allButtons = uniqueLineIds.flatMap(id => buttonsByLine.get(Number(id)) || []);
+          
+          if (allButtons.length === 0) return match;
+          
+          return `<div class="question-row">
+            ${line}
+            <div class="answer-buttons-container">
+              ${allButtons.join('\n')}
+            </div>
+          </div>`;
+        });
+
+        container.innerHTML = content;
+      }
+
+      // Update handleInput to work without check button
+      const handleInput = debounce((index) => {
+        const input = document.querySelector(`[data-blank-index="${index}"]`);
+        const showAnswerBtn = document.getElementById(`show-answer-${index}`);
+        
+        if (!input.value.trim()) {
+          input.classList.remove('correct', 'incorrect');
+          showAnswerBtn.style.display = 'none';
+          updateButtonsContainer(showAnswerBtn);
+          return;
+        }
+        
+        const userAnswer = input.value.trim().toLowerCase();
+        const correctAnswer = questionData.questions[index].answer.toLowerCase();
+        const isCorrect = userAnswer === correctAnswer;
+
+        input.classList.remove('correct', 'incorrect');
+        input.classList.add(isCorrect ? 'correct' : 'incorrect');
+        
+        showAnswerBtn.style.display = isCorrect ? 'none' : 'inline';
+        updateButtonsContainer(showAnswerBtn);
+      }, 1000);
+
+      // Add new helper function
+      function updateButtonsContainer(button) {
+        const container = button.closest('.answer-buttons-container');
+        if (!container) return;
+        
+        // Check if all buttons in container are hidden
+        const visibleButtons = Array.from(container.children)
+          .filter(btn => btn.style.display !== 'none');
+          
+        container.style.display = visibleButtons.length > 0 ? '' : 'none';
+      }
+
+      // Update toggleAnswer to show checkmark when showing answer
+      function toggleAnswer(index) {
+        const input = document.querySelector(`[data-blank-index="${index}"]`);
+        const button = document.getElementById(`show-answer-${index}`);
+        
+        if (!input || !button) return;
+        
+        input.value = questionData.questions[index].answer;
+        input.classList.remove('incorrect');
+        input.classList.add('correct');
+        
+        button.style.display = 'none';
+        updateButtonsContainer(button);
+      }
+
+      function clearAllAnswers() {
+        if (confirm('Are you sure you want to clear all answers?')) {
+          const inputs = document.querySelectorAll('.blank-input');
+          inputs.forEach(input => {
+            input.value = '';
+            input.classList.remove('correct', 'incorrect');
+            const index = input.dataset.blankIndex;
+            const showAnswerBtn = document.getElementById(`show-answer-${index}`);
+            if (showAnswerBtn) {
+              showAnswerBtn.style.display = 'none';
+              updateButtonsContainer(showAnswerBtn);
+            }
+          });
+        }
+      }
+
+      function copyContent() {
+        const container = document.getElementById('questions-container');
+        
+        // Create a clone of the content to modify
+        const clone = container.cloneNode(true);
+        
+        // Remove all buttons
+        clone.querySelectorAll('button').forEach(btn => btn.remove());
+        
+        // Replace inputs with their values or underscores
+        clone.querySelectorAll('.blank-input').forEach(input => {
+          const text = input.value.trim() || '_____';
+          const textNode = document.createTextNode(text);
+          input.replaceWith(textNode);
+        });
+        
+        // Get text content and clean up extra whitespace
+        let content = clone.innerHTML
+          .replace(/<br\s*\/?>/gi, '\n')  // Convert <br> to newlines
+          .replace(/<li>/g, '- ')  // Replace <li> with bullet points
+          .replace(/<\/li>/g, '')  // Remove closing li tags
+          .replace(/<\/?[^>]+(>|$)/g, '')  // Remove remaining HTML tags
+          .replace(/&nbsp;/g, ' ')  // Replace &nbsp; with spaces
+          .replace(/\n\s*\n/g, '\n\n')  // Remove extra blank lines
+          .trim();
+        
+        // Copy to clipboard
+        navigator.clipboard.writeText(content)
+          .then(() => alert('Content copied to clipboard!'))
+          .catch(err => console.error('Failed to copy content:', err));
+      }
+
+      function confirmFillAnswers() {
+        const messages = [
+          "Are you sure you want to see all the answers? Remember, wrestling with these questions helps us grow in our understanding! 🤔",
+          "God often works through our struggles and contemplation. Press CANCEL to spend a bit more time with these questions first. 🙏",
+          "The journey of discovery is where transformation happens! But if you really need the answers, click OK. ❤️"
+        ];
+
+        let currentDialog = 0;
+        
+        function showNextDialog() {
+          if (currentDialog < messages.length) {
+            if (!confirm(messages[currentDialog])) {
+              return; // User clicked Cancel
+            }
+            currentDialog++;
+            showNextDialog();
+          } else {
+            fillAllAnswers(); // All dialogs confirmed
+          }
+        }
+
+        showNextDialog();
+      }
+
+      function fillAllAnswers() {
+        questionData.questions.forEach((q, index) => {
+          const input = document.querySelector(`[data-blank-index="${index}"]`);
+          const showAnswerBtn = document.getElementById(`show-answer-${index}`);
+          
+          if (input) {
+            input.value = q.answer;
+            input.classList.remove('incorrect');
+            input.classList.add('correct');
+            if (showAnswerBtn) {
+              showAnswerBtn.style.display = 'none';
+              updateButtonsContainer(showAnswerBtn);
+            }
+          }
+        });
+      }
+
+      initializeQuiz();
+    </script>
+</body>
+</html> 
