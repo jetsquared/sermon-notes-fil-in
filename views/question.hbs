@@ -5,24 +5,40 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-<body class="bg-gray-50">
-    <div class="min-h-screen p-4 md:p-6">
-      <div class="max-w-3xl mx-auto">
+<body class="bg-gradient-to-br from-blue-50 to-indigo-50">
+    <!-- Fixed Progress Bar -->
+    <div class="fixed top-0 left-0 right-0 bg-white shadow-sm border-b border-gray-200 z-50">
+      <div class="max-w-4xl mx-auto px-4">
+        <div class="py-2">
+          <div class="flex items-center justify-center mb-1">
+            <span class="text-sm font-medium text-gray-600" id="progress-text">0 of 0 answers completed</span>
+          </div>
+          <div class="w-full bg-gray-200 rounded-full h-1.5">
+            <div class="bg-blue-600 h-1.5 rounded-full transition-all duration-500" id="progress-bar" style="width: 0%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add padding to main content to account for fixed header -->
+    <div class="min-h-screen p-4 md:p-6 pt-16">
+      <div class="max-w-4xl mx-auto">
+        <!-- Main Content Card -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-200">
           <!-- Toolbar -->
           <div class="p-4 bg-gray-50 border-b border-gray-200 rounded-t-xl">
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <button onclick="clearAllAnswers()" 
-                      class="flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                🗑️ Clear All Answers
+                      class="flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200">
+                🗑️ Clear All
               </button>
               <button onclick="copyContent()"
-                      class="flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                      class="flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200">
                 📋 Copy Content
               </button>
               <button onclick="confirmFillAnswers()"
-                      class="flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                💡 Fill All Answers
+                      class="flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200">
+                💡 Show Answers
               </button>
             </div>
           </div>
@@ -30,72 +46,139 @@
           <!-- Content -->
           <div class="p-6" id="questions-container"></div>
         </div>
+
+        <!-- Encouragement Toast -->
+        <div id="encouragement-toast" class="fixed bottom-4 right-4 bg-white rounded-lg shadow-lg border border-gray-200 p-4 transform translate-y-full opacity-0 transition-all duration-500">
+          <p class="text-gray-800 font-medium"></p>
+        </div>
       </div>
     </div>
 
     <style>
-      /* Minimal custom styles for specific components */
+      /* Update input styling */
       .blank-input {
-        @apply px-2 py-1 mx-1 bg-transparent;
-        border-bottom: 2px solid #d1d5db;  /* Explicit border styling */
-        outline: none;
+        @apply px-2 py-1 mx-1 text-blue-600 font-medium bg-transparent rounded-none transition-all duration-200 text-center;
+        border: none;
+        border-bottom: 2px solid #e5e7eb;
+        min-width: 80px;
+        font-size: 1.125em;
       }
       
       .blank-input:focus {
-        border-bottom: 2px solid #3b82f6;  /* Blue border on focus */
+        @apply outline-none relative;
+        border-bottom: 2px solid #3b82f6;
+        z-index: 40;  /* Below progress bar but above other content */
       }
       
       .blank-input.correct {
-        border-bottom: 2px solid #22c55e;  /* Green border for correct */
+        @apply text-green-600;
+        border-bottom: 2px solid #22c55e;
+        background: linear-gradient(180deg, transparent 65%, #dcfce7 35%);
       }
       
       .blank-input.incorrect {
-        border-bottom: 2px solid #ef4444;  /* Red border for incorrect */
+        @apply text-red-600;
+        border-bottom: 2px solid #ef4444;
+        background: linear-gradient(180deg, transparent 65%, #fee2e2 35%);
       }
 
-      .check-button {
-        @apply mx-1 text-lg hover:text-blue-500 focus:outline-none;
-      }
-
+      /* Update reveal answer button styling */
       .answer-button {
-        margin: 0 0.25rem;
-        font-size: 0.5rem;
-        padding: 0.25rem 0.5rem;
-        background-color: #eff6ff;
-        color: #2563eb;
-        border-radius: 9999px;
-        border: 1px solid #bfdbfe;
-        outline: none;
-        transition: all 0.2s;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        font-weight: 500;
-        display: inline-block;
-        margin-top: 0.5rem;
+        @apply inline-flex items-center text-xs px-1
+               transition-all duration-200;
+        background: none;
+        border: none;
+        font-size: 0.9rem;
+        opacity: 0.8;
+        margin-left: 0;
+        vertical-align: middle;
+        color: #3b82f6;  /* Blue-500 */
       }
 
       .answer-button:hover {
-        background-color: #dbeafe;
+        opacity: 1;
+        filter: brightness(1.2);
       }
 
       .answer-buttons-container {
-        display: flex;
-        gap: 0.5rem;
-        margin-top: 0.25rem;
-        margin-bottom: 0.5rem;
+        @apply inline;
+        margin: 0;
+        white-space: nowrap;
       }
+
+      .question-row {
+        @apply relative py-2 px-4 rounded-lg transition-all duration-200;
+        line-height: 1.8;
+        font-size: 1.125em;
+      }
+
+      .question-row li {
+        @apply leading-relaxed;
+        font-size: inherit;
+      }
+
+      .question-row:hover {
+        @apply bg-blue-50/30;
+      }
+
+      /* Update headers */
+      h1 { @apply text-3xl font-bold mb-8 mt-8 text-gray-900 !important; }
+      h2 { @apply text-2xl font-bold mb-6 mt-6 text-gray-800 !important; }
+      h3 { @apply text-xl font-bold mb-4 mt-4 text-gray-700 !important; }
 
       .hint {
         @apply text-gray-500 text-sm italic;
       }
 
-      .question-row {
-        display: block;
-        margin-bottom: 0.3rem;  /* Custom value between mb-1 (0.25rem) and mb-2 (0.5rem) */
-      }
-
       .answer-buttons-container:empty {
         display: none;
+      }
+
+      /* Animation for correct answers */
+      @keyframes celebrate {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+      }
+
+      .celebrate {
+        animation: celebrate 0.5s ease-in-out;
+      }
+
+      /* Ensure content stays below fixed header when scrolling */
+      #questions-container {
+        position: relative;
+        z-index: 30;
+      }
+
+      /* Update section styling */
+      .section-wrapper {
+        @apply border border-gray-200 rounded-lg overflow-hidden;
+      }
+
+      .section-header {
+        @apply flex items-center justify-between cursor-pointer p-4 transition-colors duration-200;
+      }
+
+      .section-header h2 {
+        @apply m-0 !important;
+      }
+
+      .section-content {
+        @apply overflow-hidden transition-all duration-300;
+        border-top: 1px solid #e5e7eb;
+      }
+
+      .section-content.collapsed {
+        @apply h-0 p-0 border-t-0;
+      }
+
+      .toggle-icon {
+        @apply text-gray-400 transition-transform duration-300 text-xl;
+      }
+
+      .collapsed .toggle-icon {
+        @apply rotate-180;
       }
     </style>
 
@@ -108,32 +191,50 @@
       console.log('Question Data:', questionData);
 
       function renderMarkdown(text) {
-        // Handle headers (# ## ###)
-        text = text.replace(/^(#{1,6})\s+(.+)$/gm, (match, hashes, content) => {
-          const level = hashes.length;
-          const classes = {
-            1: 'text-3xl font-bold mb-6 mt-8',
-            2: 'text-2xl font-bold mb-4 mt-6',
-            3: 'text-xl font-bold mb-3 mt-5',
-            4: 'text-lg font-bold mb-2 mt-4',
-            5: 'text-base font-bold mb-2 mt-3',
-            6: 'text-sm font-bold mb-2 mt-2'
-          };
-          return `<h${level} class="${classes[level]}">${content}</h${level}>`;
+        // First wrap sections in collapsible divs
+        const sections = [
+          'Scripture',
+          'Main Points',
+          'Fill in the Blank',
+          'Summary',
+          'Questions',
+          'Going Deeper'
+        ];
+        
+        // First handle the title separately (don't make it collapsible)
+        text = text.replace(/^# (.+)$/m, '<h1 class="text-3xl font-bold mb-6 mt-8">$1</h1>');
+        
+        // Then handle sections
+        sections.forEach(section => {
+          const sectionRegex = new RegExp(`^## ${section}[\\s\\S]*?(?=^## |$)`, 'm');
+          text = text.replace(sectionRegex, (match) => {
+            const sectionId = section.toLowerCase().replace(/\s+/g, '-');
+            // Process the section content first
+            let sectionContent = match.replace(/^## [^\n]*\n/, ''); // Remove the section header
+            
+            // Process the content markdown
+            sectionContent = sectionContent
+              // Handle bold text
+              .replace(/\*\*(.+?)\*\*/g, '<strong class="font-bold">$1</strong>')
+              // Handle bullet points
+              .replace(/^-\s+(.+)$/gm, (m, content) => 
+                `<div class="question-row"><li class="text-base leading-relaxed">${content}</li></div>`)
+              .replace(/(<div class="question-row"><li.*?<\/li><\/div>\n?)+/g, 
+                '<ul class="list-disc pl-6 my-2 space-y-1">$&</ul>');
+
+            return `
+              <div class="section-wrapper mb-4">
+                <div class="section-header bg-gray-50 hover:bg-gray-100" onclick="toggleSection('${sectionId}')">
+                  <h2 class="text-xl font-bold">${section}</h2>
+                  <span class="toggle-icon">▼</span>
+                </div>
+                <div id="${sectionId}" class="section-content p-4">
+                  ${sectionContent}
+                </div>
+              </div>
+            `;
+          });
         });
-
-        // Handle bold text (**text**)
-        text = text.replace(/\*\*(.+?)\*\*/g, '<strong class="font-bold">$1</strong>');
-
-        // Handle blockquotes
-        text = text.replace(/^>\s+(.+)$/gm, '<blockquote class="pl-4 border-l-4 border-gray-300 text-gray-600 italic my-4 text-xl leading-relaxed">$1</blockquote>');
-
-        // Handle bullet points with proper Tailwind classes
-        text = text.replace(/^-\s+(.+)$/gm, (match, content) => {
-          return `<div class="question-row"><li class="text-base leading-relaxed">${content}</li></div>`;
-        });
-        text = text.replace(/(<div class="question-row"><li.*?<\/li><\/div>\n?)+/g, 
-          '<ul class="list-disc pl-6 my-2 space-y-1">$&</ul>');
 
         return text;
       }
@@ -153,35 +254,39 @@
 
       function initializeQuiz() {
         const container = document.getElementById('questions-container');
+        if (!container) return;
+        
         let content = questionData.content;
+        if (!content) {
+          container.innerHTML = '<p class="text-red-500">No content available</p>';
+          return;
+        }
         
         content = renderMarkdown(content);
         
         // Create a map to track number of blanks per line
-        const blankCountMap = new Map();
         const buttonsByLine = new Map();
         let currentLineStart = 0;
         
         questionData.questions.forEach((q, index) => {
           const answerLength = q.answer.length;
-          const width = Math.max(80, (answerLength * 9) + 20);
+          const minWidth = Math.max(80, (answerLength * 10) + 20); // Match the adjustment logic
           
           // Find position of this #blank
           const blankPos = content.indexOf('#blank', currentLineStart);
+          if (blankPos === -1) return;
           
           // Get the line containing this blank
           const lineStart = content.lastIndexOf('\n', blankPos) + 1;
           const lineEnd = content.indexOf('\n', blankPos);
-          const currentLine = content.slice(lineStart, lineEnd > -1 ? lineEnd : content.length);
-          
-          // Use the line start position as the line identifier
           const lineId = lineStart;
           
-          // Store button HTML by line ID - now using index + 1 for the button number
+          // Store button HTML by line ID
           const buttonHtml = `<button class="answer-button"
             id="show-answer-${q.blankIndex}" 
             onclick="toggleAnswer(${q.blankIndex})"
-          >Reveal Answer ${index + 1}</button>`;
+            title="Show answer"
+          >💡</button>`;
           
           if (!buttonsByLine.has(lineId)) {
             buttonsByLine.set(lineId, []);
@@ -193,38 +298,42 @@
             data-blank-index="${q.blankIndex}" 
             data-line="${lineId}"
             oninput="handleInput(${q.blankIndex})" 
-            style="width: ${width}px">`;
+            style="width: ${minWidth}px">`;
           
-          content = content.replace('#blank', inputHtml);
+          content = content.replace('#blank', `${inputHtml}<span class="answer-buttons-container">${buttonHtml}</span>`);
           currentLineStart = blankPos + 1;
         });
 
-        // Add buttons container to question-row divs that have inputs
-        content = content.replace(/<div class="question-row">([^<]*(?:<(?!\/div)[^<]*)*)<\/div>/g, (match, line) => {
-          // Find all line IDs in this question-row
-          const lineIds = [...line.matchAll(/data-line="(\d+)"/g)].map(m => m[1]);
-          const uniqueLineIds = [...new Set(lineIds)];
-          
-          // Get all buttons for these line IDs
-          const allButtons = uniqueLineIds.flatMap(id => buttonsByLine.get(Number(id)) || []);
-          
-          if (allButtons.length === 0) return match;
-          
-          return `<div class="question-row">
-            ${line}
-            <div class="answer-buttons-container">
-              ${allButtons.join('\n')}
-            </div>
-          </div>`;
-        });
-
         container.innerHTML = content;
+        updateProgress();
+
+        // After content is rendered, initialize sections
+        const sections = document.querySelectorAll('.section-content');
+        sections.forEach(section => {
+          // Start with sections expanded
+          section.style.height = section.scrollHeight + 'px';
+          section.classList.remove('collapsed');
+        });
       }
 
-      // Update handleInput to work without check button
+      // Update the adjustInputWidth function to maintain minimum width based on answer length
+      function adjustInputWidth(input) {
+        const index = input.dataset.blankIndex;
+        const correctAnswer = questionData.questions[index].answer;
+        const answerLength = correctAnswer.length;
+        const minWidth = Math.max(80, (answerLength * 10) + 20); // Base minimum on answer length
+        const contentWidth = input.value.length * 10;
+        
+        // Use the larger of the two widths
+        input.style.width = Math.max(minWidth, contentWidth) + 'px';
+      }
+
+      // Update handleInput to include width adjustment
       const handleInput = debounce((index) => {
         const input = document.querySelector(`[data-blank-index="${index}"]`);
         const showAnswerBtn = document.getElementById(`show-answer-${index}`);
+        
+        adjustInputWidth(input);
         
         if (!input.value.trim()) {
           input.classList.remove('correct', 'incorrect');
@@ -242,7 +351,8 @@
         
         showAnswerBtn.style.display = isCorrect ? 'none' : 'inline';
         updateButtonsContainer(showAnswerBtn);
-      }, 1000);
+        updateProgress();
+      }, 500);
 
       // Add new helper function
       function updateButtonsContainer(button) {
@@ -360,7 +470,75 @@
         });
       }
 
-      initializeQuiz();
+      function updateProgress() {
+        const inputs = document.querySelectorAll('.blank-input');
+        const correctInputs = document.querySelectorAll('.blank-input.correct');
+        
+        const total = inputs.length;
+        const completed = correctInputs.length;
+        const percentage = Math.round((completed / total) * 100);
+
+        document.getElementById('progress-bar').style.width = `${percentage}%`;
+        document.getElementById('progress-text').textContent = `${completed} of ${total} completed`;
+
+        // Show encouragement messages at certain milestones
+        if (completed > 0 && completed % 5 === 0) {
+          showEncouragement(completed, total);
+        }
+      }
+
+      function showEncouragement(completed, total) {
+        const messages = [
+          "Keep going! 🌟",
+          "You're doing great! 🎉",
+          "Excellent progress! ✨",
+          "Keep seeking! 🙏",
+          "Well done! 💫"
+        ];
+
+        const toast = document.getElementById('encouragement-toast');
+        toast.querySelector('p').textContent = messages[Math.floor(Math.random() * messages.length)];
+        
+        toast.classList.remove('translate-y-full', 'opacity-0');
+        setTimeout(() => {
+          toast.classList.add('translate-y-full', 'opacity-0');
+        }, 3000);
+      }
+
+      // Update the toggle function to be more robust
+      function toggleSection(sectionId) {
+        const content = document.getElementById(sectionId);
+        if (!content) return;
+        
+        const header = content.previousElementSibling;
+        const wrapper = content.parentElement;
+        
+        if (content.classList.contains('collapsed')) {
+          content.style.height = content.scrollHeight + 'px';
+          content.classList.remove('collapsed');
+          header.classList.remove('collapsed');
+        } else {
+          content.style.height = content.scrollHeight + 'px';
+          // Force a reflow
+          content.offsetHeight;
+          content.style.height = '0px';
+          content.classList.add('collapsed');
+          header.classList.add('collapsed');
+        }
+      }
+
+      // Add resize handler for dynamic content
+      window.addEventListener('resize', debounce(() => {
+        const openSections = document.querySelectorAll('.section-content:not(.collapsed)');
+        openSections.forEach(section => {
+          section.style.height = section.scrollHeight + 'px';
+        });
+      }, 250));
+
+      // Initialize when DOM is loaded
+      document.addEventListener('DOMContentLoaded', () => {
+        initializeQuiz();
+      });
     </script>
 </body>
 </html> 
