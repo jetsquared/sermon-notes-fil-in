@@ -8,7 +8,7 @@ export class QuestionsService {
   private questions: Map<string, Question> = new Map();
 
   async loadQuestions() {
-    const questionsDir = path.join(process.cwd(), 'content/questions');
+    const questionsDir = path.join(process.cwd(), 'content');
     const files = await fs.readdir(questionsDir);
     
     for (const file of files) {
